@@ -84,6 +84,10 @@ var (
 	deleteNonReplicatedPods = flags.Bool("delete-non-replicated-pods", false, `Delete non-replicated pods running on on-demand instance. Note that some non-replicated pods will not be rescheduled.`)
 
 	showVersion = flags.Bool("version", false, "Show version information and exit.")
+
+	workloadToMove = flags.String("workload-to-move", "", `Specific workload to move`)
+
+	excludeSts = flags.Bool("exclude-sts", false, `Optional, set to true if do not want to move sts`)
 )
 
 func main() {
@@ -281,14 +285,39 @@ func run(kubeClient kube_client.Interface, recorder kube_record.EventRecorder) {
 								controlledByDaemonSet = true
 								break
 							}
+
+							if *excludeSts {
+								if *owner.Controller && owner.Kind == "ReplicaSet" {
+									glog.Infof(owner.Name)
+									if *workloadToMove != "" {
+										if strings.Contains(owner.Name, *workloadToMove) {
+											glog.Infof("move %s", owner.Name)
+											podsForDeletion = append(podsForDeletion, pod)
+											break
+										}
+									} else {
+										glog.Infof("drain all workload non sts")
+										podsForDeletion = append(podsForDeletion, pod)
+										break
+									}
+								}
+							} else if *excludeSts == false && *workloadToMove != "" {
+								if strings.Contains(owner.Name, *workloadToMove) {
+									glog.Infof("move %s", owner.Name)
+									podsForDeletion = append(podsForDeletion, pod)
+									break
+								}
+							} else {
+								glog.Infof("move all workload")
+								podsForDeletion = append(podsForDeletion, pod)
+								break
+							}
 						}
 
 						if controlledByDaemonSet {
 							glog.V(4).Infof("Ignoring pod %s which is controlled by DaemonSet", podID(pod))
 							continue
 						}
-
-						podsForDeletion = append(podsForDeletion, pod)
 					}
 
 					// Update the number of pods on this node's metrics

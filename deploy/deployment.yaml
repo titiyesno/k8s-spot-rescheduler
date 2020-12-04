@@ -17,9 +17,9 @@ spec:
         app: k8s-spot-rescheduler
     spec:
       # Uncomment the following line if using RBAC
-      #serviceAccountName: k8s-spot-rescheduler
+      serviceAccountName: k8s-spot-rescheduler
       containers:
-        - image: quay.io/pusher/k8s-spot-rescheduler:v0.3.0
+        - image: <IMAGE_URI>
           name: k8s-spot-rescheduler
           resources:
             limits:
@@ -38,8 +38,13 @@ spec:
             - --pod-eviction-timeout=2m
             - --max-graceful-termination=2m
             - --listen-address=0.0.0.0:9235
-            - --on-demand-node-label=node-role.kubernetes.io/worker
-            - --spot-node-label=node-role.kubernetes.io/spot-worker
+            - --on-demand-node-label=<ON_DEMAND_NODE_LABEL>
+            - --spot-node-label=<SPOT_NODE_LABEL>
+            # Set the following to false if you want to move sts as well
+            - --exclude-sts=true
+            # Uncomment the following if you need to move specific workload only.
+            # Fill the value with your workload name string/substring
+            - --workload-to-move=<WORKLOAD_NAME_SUBSTRING>
           ports:
           - name: http
             containerPort: 9235
